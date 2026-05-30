@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Tester - PipiPupu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #3390ec;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        button {
+            background: #3390ec;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #2b7cc4;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .response {
+            margin-top: 15px;
+            padding: 15px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .success {
+            border-color: #4caf50;
+            background: #f1f8f4;
+        }
+
+        .error {
+            border-color: #f44336;
+            background: #fef1f1;
+        }
+
+        .token-display {
+            background: #fffbf0;
+            border: 1px solid #ffd54f;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            word-break: break-all;
+        }
+
+        .ws-status {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #f44336;
+            margin-left: 10px;
+        }
+
+        .ws-status.connected {
+            background: #4caf50;
+        }
+
+        .messages-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        .message-item {
+            padding: 8px;
+            margin-bottom: 5px;
+            background: #fff;
+            border-radius: 4px;
+            border-left: 3px solid #3390ec;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 API Tester - PipiPupu Messenger</h1>
+        <p class="subtitle">Инструмент для тестирования API и WebSocket</p>
+
+        <div class="grid">
+            <!-- Auth Section -->
+            <div class="section">
+                <h2>🔐 Авторизация</h2>
+                
+                <div class="input-group">
+                    <label>Username</label>
+                    <input type="text" id="auth-username" value="demo">
+                </div>
+                
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="auth-password" value="demo123">
+                </div>
+                
+                <button onclick="login()">Войти</button>
+                <button onclick="register()">Регистрация</button>
+                
+                <div id="auth-response" class="response" style="display: none;"></div>
+                
+                <div id="token-display" class="token-display" style="display: none;">
+                    <strong>Token:</strong> <span id="token-value"></span>
+                </div>
+            </div>
+
+            <!-- User Section -->
+            <div class="section">
+                <h2>👤 Профиль</h2>
+                
+                <button onclick="getProfile()" id="get-profile-btn" disabled>Получить профиль</button>
+                <button onclick="updateProfile()" id="update-profile-btn" disabled>Обновить профиль</button>
+                
+                <div class="input-group" style="margin-top: 15px;">
+                    <label>Username</label>
+                    <input type="text" id="profile-username">
+                </div>
+                
+                <div class="input-group">
+                    <label>Bio</label>
+                    <textarea id="profile-bio" rows="3"></textarea>
+                </div>
+                
+                <div id="profile-response" class="response" style="display: none;"></div>
+            </div>
+
+            <!-- Chats Section -->
+            <div class="section">
+                <h2>💬 Чаты</h2>
+                
+                <button onclick="getChats()" id="get-chats-btn" disabled>Получить чаты</button>
+                <button onclick="createChannel()" id="create-channel-btn" disabled>Создать канал</button>
+                
+                <div class="input-group" style="margin-top: 15px;">
+                    <label>Название канала</label>
+                    <input type="text" id="channel-name" value="Test Channel">
+                </div>
+                
+                <div class="input-group">
+                    <label>Описание</label>
+                    <input type="text" id="channel-description" value="Test channel description">
+                </div>
+                
+                <div id="chats-response" class="response" style="display: none;"></div>
+            </div>
+
+            <!-- WebSocket Section -->
+            <div class="section">
+                <h2>🔌 WebSocket 
+                    <span class="ws-status" id="ws-status"></span>
+                </h2>
+                
+                <button onclick="connectWebSocket()" id="ws-connect-btn" disabled>Подключиться</button>
+                <button onclick="disconnectWebSocket()" id="ws-disconnect-btn" disabled>Отключиться</button>
+                
+                <div class="input-group" style="margin-top: 15px;">
+                    <label>Chat ID</label>
+                    <input type="text" id="ws-chat-id" placeholder="Введите ID чата">
+                </div>
+                
+                <div class="input-group">
+                    <label>Сообщение</label>
+                    <input type="text" id="ws-message" placeholder="Введите сообщение">
+                </div>
+                
+                <button onclick="sendMessage()" id="send-message-btn" disabled>Отправить</button>
+                
+                <div class="messages-list" id="ws-messages"></div>
+            </div>
+
+            <!-- File Upload Section -->
+            <div class="section">
+                <h2>📎 Загрузка файлов</h2>
+                
+                <div class="input-group">
+                    <label>Выберите файл</label>
+                    <input type="file" id="file-input">
+                </div>
+                
+                <button onclick="uploadFile()" id="upload-btn" disabled>Загрузить</button>
+                
+                <div id="upload-response" class="response" style="display: none;"></div>
+            </div>
+
+            <!-- Server Health -->
+            <div class="section">
+                <h2>🏥 Здоровье сервера</h2>
+                
+                <button onclick="checkHealth()">Проверить</button>
+                
+                <div id="health-response" class="response" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const RAILWAY_URL = 'bebebe-production-ac07.up.railway.app';
+        
+        const API_URL = isDevelopment 
+            ? 'http://localhost:3000' 
+            : `https://${RAILWAY_URL}`;
+        
+        const WS_URL = isDevelopment 
+            ? 'ws://localhost:3000' 
+            : `wss://${RAILWAY_URL}`;
+
+        let token = localStorage.getItem('test_token');
+        let ws = null;
+
+        // Update UI based on token
+        function updateUI() {
+            const hasToken = !!token;
+            document.getElementById('get-profile-btn').disabled = !hasToken;
+            document.getElementById('update-profile-btn').disabled = !hasToken;
+            document.getElementById('get-chats-btn').disabled = !hasToken;
+            document.getElementById('create-channel-btn').disabled = !hasToken;
+            document.getElementById('ws-connect-btn').disabled = !hasToken;
+            document.getElementById('upload-btn').disabled = !hasToken;
+            
+            if (hasToken) {
+                document.getElementById('token-display').style.display = 'block';
+                document.getElementById('token-value').textContent = token.substring(0, 50) + '...';
+            }
+        }
+
+        updateUI();
+
+        // Auth Functions
+        async function login() {
+            const username = document.getElementById('auth-username').value;
+            const password = document.getElementById('auth-password').value;
+            
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                displayResponse('auth-response', data, response.ok);
+                
+                if (response.ok) {
+                    token = data.token;
+                    localStorage.setItem('test_token', token);
+                    updateUI();
+                }
+            } catch (error) {
+                displayResponse('auth-response', { error: error.message }, false);
+            }
+        }
+
+        async function register() {
+            const username = document.getElementById('auth-username').value;
+            const password = document.getElementById('auth-password').value;
+            
+            try {
+                const response = await fetch(`${API_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, email: `${username}@test.com` })
+                });
+                
+                const data = await response.json();
+                displayResponse('auth-response', data, response.ok);
+                
+                if (response.ok) {
+                    token = data.token;
+                    localStorage.setItem('test_token', token);
+                    updateUI();
+                }
+            } catch (error) {
+                displayResponse('auth-response', { error: error.message }, false);
+            }
+        }
+
+        // User Functions
+        async function getProfile() {
+            try {
+                const response = await fetch(`${API_URL}/users/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                displayResponse('profile-response', data, response.ok);
+                
+                if (response.ok) {
+                    document.getElementById('profile-username').value = data.username;
+                    document.getElementById('profile-bio').value = data.bio || '';
+                }
+            } catch (error) {
+                displayResponse('profile-response', { error: error.message }, false);
+            }
+        }
+
+        async function updateProfile() {
+            const username = document.getElementById('profile-username').value;
+            const bio = document.getElementById('profile-bio').value;
+            
+            try {
+                const response = await fetch(`${API_URL}/users/me`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, bio })
+                });
+                
+                const data = await response.json();
+                displayResponse('profile-response', data, response.ok);
+            } catch (error) {
+                displayResponse('profile-response', { error: error.message }, false);
+            }
+        }
+
+        // Chat Functions
+        async function getChats() {
+            try {
+                const response = await fetch(`${API_URL}/chats`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                displayResponse('chats-response', data, response.ok);
+            } catch (error) {
+                displayResponse('chats-response', { error: error.message }, false);
+            }
+        }
+
+        async function createChannel() {
+            const name = document.getElementById('channel-name').value;
+            const description = document.getElementById('channel-description').value;
+            
+            try {
+                const response = await fetch(`${API_URL}/channels`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, description })
+                });
+                
+                const data = await response.json();
+                displayResponse('chats-response', data, response.ok);
+            } catch (error) {
+                displayResponse('chats-response', { error: error.message }, false);
+            }
+        }
+
+        // WebSocket Functions
+        function connectWebSocket() {
+            ws = new WebSocket(WS_URL);
+            
+            ws.onopen = () => {
+                document.getElementById('ws-status').classList.add('connected');
+                document.getElementById('ws-disconnect-btn').disabled = false;
+                document.getElementById('send-message-btn').disabled = false;
+                addWSMessage('✅ Connected to WebSocket');
+                
+                // Authenticate
+                ws.send(JSON.stringify({
+                    type: 'auth',
+                    token: token
+                }));
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                addWSMessage(`📨 ${JSON.stringify(data, null, 2)}`);
+            };
+            
+            ws.onclose = () => {
+                document.getElementById('ws-status').classList.remove('connected');
+                document.getElementById('ws-disconnect-btn').disabled = true;
+                document.getElementById('send-message-btn').disabled = true;
+                addWSMessage('❌ Disconnected from WebSocket');
+            };
+            
+            ws.onerror = (error) => {
+                addWSMessage(`⚠️ Error: ${error.message}`);
+            };
+        }
+
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function sendMessage() {
+            const chatId = document.getElementById('ws-chat-id').value;
+            const text = document.getElementById('ws-message').value;
+            
+            if (!chatId || !text) {
+                alert('Введите Chat ID и сообщение');
+                return;
+            }
+            
+            ws.send(JSON.stringify({
+                type: 'message',
+                payload: {
+                    chatId: chatId,
+                    text: text,
+                    file: null
+                }
+            }));
+            
+            document.getElementById('ws-message').value = '';
+            addWSMessage(`📤 Sent: ${text}`);
+        }
+
+        function addWSMessage(message) {
+            const container = document.getElementById('ws-messages');
+            const div = document.createElement('div');
+            div.className = 'message-item';
+            div.innerHTML = `<small>${new Date().toLocaleTimeString()}</small><br>${message}`;
+            container.insertBefore(div, container.firstChild);
+        }
+
+        // File Upload
+        async function uploadFile() {
+            const fileInput = document.getElementById('file-input');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Выберите файл');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch(`${API_URL}/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                displayResponse('upload-response', data, response.ok);
+            } catch (error) {
+                displayResponse('upload-response', { error: error.message }, false);
+            }
+        }
+
+        // Health Check
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+                displayResponse('health-response', data, response.ok);
+            } catch (error) {
+                displayResponse('health-response', { error: error.message }, false);
+            }
+        }
+
+        // Helper function
+        function displayResponse(elementId, data, success) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = success ? 'response success' : 'response error';
+            element.textContent = JSON.stringify(data, null, 2);
+        }
+    </script>
+</body>
+</html>
